@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.IBinder
@@ -17,14 +18,19 @@ class IsolateHolderService : Service() {
     companion object {
         @JvmStatic
         val ACTION_SHUTDOWN = "SHUTDOWN"
+
         @JvmStatic
         val ACTION_START = "START"
+
         @JvmStatic
         val WAKELOCK_TAG = "FlutterBackgroundPlugin:Wakelock"
+
         @JvmStatic
         val WIFILOCK_TAG = "FlutterBackgroundPlugin:WifiLock"
+
         @JvmStatic
         val CHANNEL_ID = "flutter_background"
+
         @JvmStatic
         private val TAG = "IsolateHolderService"
     }
@@ -32,20 +38,20 @@ class IsolateHolderService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var wifiLock: WifiManager.WifiLock? = null
 
-    override fun onBind(intent: Intent) : IBinder? {
+    override fun onBind(intent: Intent): IBinder? {
         return null
     }
 
     override fun onCreate() {
         FlutterBackgroundPlugin.loadNotificationConfiguration(applicationContext)
     }
-    
+
     override fun onDestroy() {
         cleanupService()
         super.onDestroy()
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int) : Int {
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_SHUTDOWN) {
             cleanupService()
             stopSelf()
@@ -61,13 +67,11 @@ class IsolateHolderService : Service() {
                 release()
             }
         }
-
-        if (FlutterBackgroundPlugin.enableWifiLock) {
-            wifiLock?.apply {
-                if (isHeld) {
-                    release()
-                }
+        wifiLock?.apply {
+            if (isHeld) {
+                release()
             }
+
         }
 
         stopForeground(true)
@@ -76,14 +80,14 @@ class IsolateHolderService : Service() {
     @SuppressLint("WakelockTimeout")
     private fun startService() {
         val pm = applicationContext.packageManager
-        val notificationIntent  =
+        val notificationIntent =
             pm.getLaunchIntentForPackage(applicationContext.packageName)
 
         // See https://developer.android.com/guide/components/intents-filters#DeclareMutabilityPendingIntent
         var flags = PendingIntent.FLAG_UPDATE_CURRENT
         if (Build.VERSION.SDK_INT > 23) flags = flags or PendingIntent.FLAG_IMMUTABLE
 
-        val pendingIntent  = PendingIntent.getActivity(
+        val pendingIntent = PendingIntent.getActivity(
             this, 0,
             notificationIntent, flags
         )
@@ -92,7 +96,8 @@ class IsolateHolderService : Service() {
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 FlutterBackgroundPlugin.notificationTitle,
-                FlutterBackgroundPlugin.notificationImportance).apply {
+                FlutterBackgroundPlugin.notificationImportance
+            ).apply {
                 description = FlutterBackgroundPlugin.notificationText
             }
             // Register the channel with the system
@@ -101,7 +106,11 @@ class IsolateHolderService : Service() {
             notificationManager.createNotificationChannel(channel)
         }
 
-        val imageId = resources.getIdentifier(FlutterBackgroundPlugin.notificationIconName, FlutterBackgroundPlugin.notificationIconDefType, packageName)
+        val imageId = resources.getIdentifier(
+            FlutterBackgroundPlugin.notificationIconName,
+            FlutterBackgroundPlugin.notificationIconDefType,
+            packageName
+        )
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(FlutterBackgroundPlugin.notificationTitle)
             .setContentText(FlutterBackgroundPlugin.notificationText)
@@ -117,14 +126,22 @@ class IsolateHolderService : Service() {
             }
         }
 
-        (applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager).run {
-            wifiLock = createWifiLock(WifiManager.WIFI_MODE_FULL, WIFILOCK_TAG).apply {
-                setReferenceCounted(false)
-                acquire()
+        if (FlutterBackgroundPlugin.enableWifiLock) {
+            (applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager).run {
+                wifiLock =
+                    createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, WIFILOCK_TAG).apply {
+                        setReferenceCounted(false)
+                        acquire()
+                    }
             }
         }
 
-        startForeground(1, notification)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
+        } else {
+            startForeground(1, notification)
+        }
     }
 
     override fun onTaskRemoved(rootIntent: Intent) {

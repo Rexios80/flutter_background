@@ -3,7 +3,6 @@ package de.julianassmann.flutter_background
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import androidx.annotation.NonNull
 import androidx.core.app.NotificationCompat
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin
@@ -15,7 +14,6 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.PluginRegistry
-import io.flutter.plugin.common.PluginRegistry.Registrar
 
 class FlutterBackgroundPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
   private var methodChannel : MethodChannel? = null
@@ -24,12 +22,6 @@ class FlutterBackgroundPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
   private var context: Context? = null
 
   companion object {
-    @JvmStatic
-    fun registerWith(registrar: Registrar) {
-      val channel = MethodChannel(registrar.messenger(), "flutter_background")
-      channel.setMethodCallHandler(FlutterBackgroundPlugin())
-    }
-
     @JvmStatic
     val NOTIFICATION_TITLE_KEY = "android.notificationTitle"
     @JvmStatic
@@ -85,17 +77,7 @@ class FlutterBackgroundPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
     }
   }
 
-
-  private fun isValidResource(context: Context, name: String, defType: String, result: Result, errorCode: String): Boolean {
-    val resourceId = context.resources.getIdentifier(name, defType, context.packageName)
-    if (resourceId == 0) {
-      result.error("ResourceError", "The resource $defType/$name could not be found. Please make sure it has been added as a resource to your Android head project.", errorCode)
-      return false
-    }
-    return true
-  }
-
-  override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
+  override fun onMethodCall(call: MethodCall, result: Result) {
 
     // System.out.println(call.method)
     // System.out.flush()

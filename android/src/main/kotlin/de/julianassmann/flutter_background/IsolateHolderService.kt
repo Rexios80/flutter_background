@@ -80,16 +80,14 @@ class IsolateHolderService : Service() {
     @SuppressLint("WakelockTimeout")
     private fun startService() {
         val pm = applicationContext.packageManager
-        val notificationIntent =
-            pm.getLaunchIntentForPackage(applicationContext.packageName)
+        val notificationIntent = pm.getLaunchIntentForPackage(applicationContext.packageName)
 
         // See https://developer.android.com/guide/components/intents-filters#DeclareMutabilityPendingIntent
         var flags = PendingIntent.FLAG_UPDATE_CURRENT
         if (Build.VERSION.SDK_INT > 23) flags = flags or PendingIntent.FLAG_IMMUTABLE
 
         val pendingIntent = PendingIntent.getActivity(
-            this, 0,
-            notificationIntent, flags
+            this, 0, notificationIntent, flags
         )
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -113,11 +111,9 @@ class IsolateHolderService : Service() {
         )
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(FlutterBackgroundPlugin.notificationTitle)
-            .setContentText(FlutterBackgroundPlugin.notificationText)
-            .setSmallIcon(imageId)
+            .setContentText(FlutterBackgroundPlugin.notificationText).setSmallIcon(imageId)
             .setContentIntent(pendingIntent)
-            .setPriority(FlutterBackgroundPlugin.notificationImportance)
-            .build()
+            .setPriority(FlutterBackgroundPlugin.notificationImportance).build()
 
         (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
             wakeLock = newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKELOCK_TAG).apply {

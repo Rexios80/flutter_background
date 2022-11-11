@@ -1,13 +1,11 @@
 package de.julianassmann.flutter_background
 
-import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ServiceInfo
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.IBinder
@@ -30,9 +28,6 @@ class IsolateHolderService : Service() {
 
         @JvmStatic
         val CHANNEL_ID = "flutter_background"
-
-        @JvmStatic
-        private val TAG = "IsolateHolderService"
     }
 
     private var wakeLock: PowerManager.WakeLock? = null
@@ -74,10 +69,14 @@ class IsolateHolderService : Service() {
 
         }
 
-        stopForeground(true)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
+        }
     }
 
-    @SuppressLint("WakelockTimeout")
     private fun startService() {
         val pm = applicationContext.packageManager
         val notificationIntent = pm.getLaunchIntentForPackage(applicationContext.packageName)
@@ -104,6 +103,7 @@ class IsolateHolderService : Service() {
             notificationManager.createNotificationChannel(channel)
         }
 
+        @Suppress("DiscouragedApi")
         val imageId = resources.getIdentifier(
             FlutterBackgroundPlugin.notificationIconName,
             FlutterBackgroundPlugin.notificationIconDefType,
@@ -118,6 +118,7 @@ class IsolateHolderService : Service() {
         (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
             wakeLock = newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKELOCK_TAG).apply {
                 setReferenceCounted(false)
+                @Suppress("WakelockTimeout")
                 acquire()
             }
         }
@@ -134,7 +135,7 @@ class IsolateHolderService : Service() {
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
+            startForeground(1, notification, FlutterBackgroundPlugin.foregroundServiceType)
         } else {
             startForeground(1, notification)
         }

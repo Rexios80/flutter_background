@@ -6,9 +6,13 @@ enum AndroidNotificationImportance {
 
   // Min,
   // Low,
-  Default,
-  High,
-  Max,
+  Default(0),
+  High(1),
+  Max(2);
+
+  final int value;
+
+  const AndroidNotificationImportance(this.value);
 }
 
 // Represents the information required to get an Android resource.
@@ -21,6 +25,19 @@ class AndroidResource {
   final String defType;
 
   const AndroidResource({required this.name, this.defType = 'drawable'});
+}
+
+enum AndroidForegroundServiceType {
+  location(8),
+  camera(64),
+  microphone(128);
+
+  final int value;
+
+  const AndroidForegroundServiceType(this.value);
+
+  static int combine(List<AndroidForegroundServiceType> types) =>
+      types.fold(0, (p, e) => p | e.value);
 }
 
 /// Android configuration for the [FlutterBackground] plugin.
@@ -48,6 +65,12 @@ class FlutterBackgroundAndroidConfig {
   /// do not support it (ex: Wear OS).
   final bool shouldRequestBatteryOptimizationsOff;
 
+  /// The foreground services types to use to start the service.
+  ///
+  /// These are required if you are using any of these features in the
+  /// background: location, camera, microphone.
+  final List<AndroidForegroundServiceType> foregroundServiceTypes;
+
   /// Creates an Android specific configuration for the [FlutterBackground] plugin.
   ///
   /// [notificationTitle] is the title used for the foreground service notification.
@@ -67,5 +90,6 @@ class FlutterBackgroundAndroidConfig {
         const AndroidResource(name: 'ic_launcher', defType: 'mipmap'),
     this.enableWifiLock = true,
     this.shouldRequestBatteryOptimizationsOff = true,
+    this.foregroundServiceTypes = const [],
   });
 }

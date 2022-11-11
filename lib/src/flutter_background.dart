@@ -21,14 +21,17 @@ class FlutterBackground {
     _isInitialized = await _channel.invokeMethod<bool>('initialize', {
           'android.notificationTitle': androidConfig.notificationTitle,
           'android.notificationText': androidConfig.notificationText,
-          'android.notificationImportance': _androidNotificationImportanceToInt(
-              androidConfig.notificationImportance),
+          'android.notificationImportance':
+              androidConfig.notificationImportance.value,
           'android.notificationIconName': androidConfig.notificationIcon.name,
           'android.notificationIconDefType':
               androidConfig.notificationIcon.defType,
           'android.enableWifiLock': androidConfig.enableWifiLock,
           'android.shouldRequestBatteryOptimizationsOff':
               androidConfig.shouldRequestBatteryOptimizationsOff,
+          'android.foregroundServiceType': AndroidForegroundServiceType.combine(
+            androidConfig.foregroundServiceTypes,
+          )
         }) ==
         true;
     return _isInitialized;
@@ -80,24 +83,4 @@ class FlutterBackground {
 
   /// Indicates whether background execution is currently enabled.
   static bool get isBackgroundExecutionEnabled => _isBackgroundExecutionEnabled;
-
-  static int _androidNotificationImportanceToInt(
-      AndroidNotificationImportance importance) {
-    switch (importance) {
-      // Low and min importance levels apparantly are not supported, see
-      // https://github.com/JulianAssmann/flutter_background/issues/37 for more.
-
-      // case AndroidNotificationImportance.Low:
-      //   return -1;
-      // case AndroidNotificationImportance.Min:
-      //   return -2;
-      case AndroidNotificationImportance.High:
-        return 1;
-      case AndroidNotificationImportance.Max:
-        return 2;
-      case AndroidNotificationImportance.Default:
-      default:
-        return 0;
-    }
-  }
 }

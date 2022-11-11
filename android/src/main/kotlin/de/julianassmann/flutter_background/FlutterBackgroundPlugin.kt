@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
-
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -45,6 +44,9 @@ class FlutterBackgroundPlugin : FlutterPlugin, MethodCallHandler, ActivityAware 
             "android.shouldRequestBatteryOptimizationsOff"
 
         @JvmStatic
+        val FOREGROUND_SERVICE_TYPE_KEY = "android.foregroundServiceType"
+
+        @JvmStatic
         var notificationTitle: String = "flutter_background foreground service"
 
         @JvmStatic
@@ -65,6 +67,8 @@ class FlutterBackgroundPlugin : FlutterPlugin, MethodCallHandler, ActivityAware 
         @JvmStatic
         var shouldRequestBatteryOptimizationsOff: Boolean = true
 
+        @JvmStatic
+        var foregroundServiceType = 0
 
         fun loadNotificationConfiguration(context: Context?) {
             val sharedPref = context?.getSharedPreferences(
@@ -84,6 +88,7 @@ class FlutterBackgroundPlugin : FlutterPlugin, MethodCallHandler, ActivityAware 
                 sharedPref?.getString(NOTIFICATION_ICON_DEF_TYPE_KEY, notificationIconDefType)
                     ?: notificationIconDefType
             enableWifiLock = sharedPref?.getBoolean(ENABLE_WIFI_LOCK_KEY, false) ?: false
+            foregroundServiceType = sharedPref?.getInt(FOREGROUND_SERVICE_TYPE_KEY, 0) ?: 0
         }
 
         fun saveNotificationConfiguration(context: Context?) {
@@ -97,6 +102,7 @@ class FlutterBackgroundPlugin : FlutterPlugin, MethodCallHandler, ActivityAware 
                 this?.putString(NOTIFICATION_ICON_NAME_KEY, notificationIconName)
                 this?.putString(NOTIFICATION_ICON_DEF_TYPE_KEY, notificationIconDefType)
                 this?.putBoolean(ENABLE_WIFI_LOCK_KEY, enableWifiLock)
+                this?.putInt(FOREGROUND_SERVICE_TYPE_KEY, foregroundServiceType)
                 this?.apply()
             }
         }
@@ -119,25 +125,22 @@ class FlutterBackgroundPlugin : FlutterPlugin, MethodCallHandler, ActivityAware 
             }
 
             "initialize" -> {
-                val title = call.argument<String>(NOTIFICATION_TITLE_KEY)
-                val text = call.argument<String>(NOTIFICATION_TEXT_KEY)
-                val importance = call.argument<Int>(NOTIFICATION_IMPORTANCE_KEY)
-                val iconName = call.argument<String>(NOTIFICATION_ICON_NAME_KEY)
-                val iconDefType = call.argument<String>(NOTIFICATION_ICON_DEF_TYPE_KEY)
-                val wifiLock = call.argument<Boolean>(ENABLE_WIFI_LOCK_KEY)
-                val requestBatteryOptimizationsOff =
-                    call.argument<Boolean>(SHOULD_REQUEST_BATTERY_OPTIMIZATIONS_OFF_KEY)
-
                 // Set static values so the IsolateHolderService can use them later on to configure the notification
-                notificationImportance = importance ?: notificationImportance
-                notificationTitle = title ?: notificationTitle
-                notificationText = text ?: notificationText
-                notificationIconName = iconName ?: notificationIconName
-                notificationIconDefType = iconDefType ?: notificationIconDefType
-                enableWifiLock = wifiLock ?: enableWifiLock
-
+                notificationImportance =
+                    call.argument<Int>(NOTIFICATION_IMPORTANCE_KEY) ?: notificationImportance
+                notificationTitle =
+                    call.argument<String>(NOTIFICATION_TITLE_KEY) ?: notificationTitle
+                notificationText = call.argument<String>(NOTIFICATION_TEXT_KEY) ?: notificationText
+                notificationIconName =
+                    call.argument<String>(NOTIFICATION_ICON_NAME_KEY) ?: notificationIconName
+                notificationIconDefType =
+                    call.argument<String>(NOTIFICATION_ICON_DEF_TYPE_KEY) ?: notificationIconDefType
+                enableWifiLock = call.argument<Boolean>(ENABLE_WIFI_LOCK_KEY) ?: enableWifiLock
                 shouldRequestBatteryOptimizationsOff =
-                    requestBatteryOptimizationsOff ?: shouldRequestBatteryOptimizationsOff
+                    call.argument<Boolean>(SHOULD_REQUEST_BATTERY_OPTIMIZATIONS_OFF_KEY)
+                        ?: shouldRequestBatteryOptimizationsOff
+                foregroundServiceType =
+                    call.argument<Int>(FOREGROUND_SERVICE_TYPE_KEY) ?: foregroundServiceType
 
                 saveNotificationConfiguration(context)
 
@@ -157,7 +160,7 @@ class FlutterBackgroundPlugin : FlutterPlugin, MethodCallHandler, ActivityAware 
                 }
 
                 // Ensure ignoring battery optimizations is enabled if requested
-                if (shouldRequestBatteryOptimizationsOff && !permissionHandler!!.isIgnoringBatteryOptimizations()) {
+                if (FlutterBackgroundPlugin.shouldRequestBatteryOptimizationsOff && !permissionHandler!!.isIgnoringBatteryOptimizations()) {
                     if (activity != null) {
                         permissionHandler!!.requestBatteryOptimizationsOff(result, activity!!)
                     } else {
